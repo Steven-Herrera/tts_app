@@ -1,0 +1,6 @@
+tts:
+  model_name: "tts_models/en/jenny/jenny"
+  use_gpu: true
+
+audio:
+  sample_rate: 22050
