@@ -1,6 +1,7 @@
 tts:
-  model_name: "tts_models/en/jenny/jenny"
+  model_name: "tts_models/en/vctk/vits"
   use_gpu: true
+  speaker_id: "p260"
 
 audio:
   sample_rate: 22050

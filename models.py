@@ -10,6 +10,7 @@ class TTSConfig(BaseModel):
 
     model_name: str = Field(..., description="Coqui TTS model name")
     use_gpu: bool = Field(default=True)
+    speaker_id: str = Field(..., description="Speaker ID (e.g. p260)")
 
     @field_validator("model_name")
     @classmethod
