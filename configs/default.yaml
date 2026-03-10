@@ -1,7 +1,20 @@
 tts:
-  model_name: "tts_models/en/vctk/vits"
+  model_name: "tts_models/multilingual/multi-dataset/xtts_v2" # tts_models/en/vctk/vits
   use_gpu: true
-  speaker_id: "p260"
+
+  default_voice:
+    preset: "cloned_obama" # "british_young_female"
 
 audio:
   sample_rate: 22050
+
+voices:
+  presets:
+    # british_young_female:
+    #   type: "speaker"
+    #   speaker_id: "p260"
+
+    cloned_obama:
+      type: "clone"
+      reference_audio_path: "voices/obama/reference.wav"
+      language: "en"

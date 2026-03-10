@@ -1,5 +1,3 @@
-"""Application entry point."""
-
 from audio_writer import AudioStreamWriter
 from chunking import TextChunker
 from config import load_config
@@ -7,6 +5,7 @@ from models import SynthesisRequest
 from services import TTSService
 from tts_engine import CoquiTTSEngine
 from utils import parse_args
+from voice_registry import VoiceResolver
 
 
 def main() -> None:
@@ -23,10 +22,17 @@ def main() -> None:
     writer = AudioStreamWriter(
         output_path=request.output_path,
         sample_rate=config.audio.sample_rate,
-        silence_duration_sec=0.3,
     )
 
-    service = TTSService(engine, chunker, writer)
+    voice_resolver = VoiceResolver(config)
+
+    service = TTSService(
+        engine=engine,
+        chunker=chunker,
+        writer=writer,
+        voice_resolver=voice_resolver,
+    )
+
     service.process(request)
 
 

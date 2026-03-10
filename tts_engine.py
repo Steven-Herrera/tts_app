@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from TTS.api import TTS
 
-from models import TTSConfig
+from models import TTSConfig, VoiceProfile
 
 
 class TextToSpeechEngine(ABC):
@@ -15,9 +15,10 @@ class TextToSpeechEngine(ABC):
 
     @abstractmethod
     def synthesize_stream(
-        self, text_chunks: Generator[str, None, None]
+        self,
+        text_chunks: Generator[str, None, None],
+        voice_profile: Optional[VoiceProfile],
     ) -> Generator[np.ndarray, None, None]:
-        """Stream synthesized audio chunks."""
         pass
 
 
@@ -27,17 +28,29 @@ class CoquiTTSEngine(TextToSpeechEngine):
     def __init__(self, config: TTSConfig) -> None:
         self._device = "cuda" if config.use_gpu and torch.cuda.is_available() else "cpu"
         self._tts = TTS(model_name=config.model_name).to(self._device)
-        self._speaker_id = config.speaker_id
 
     def synthesize_stream(
-        self, text_chunks: Generator[str, None, None]
+        self,
+        text_chunks: Generator[str, None, None],
+        voice_profile: Optional[VoiceProfile],
     ) -> Generator[np.ndarray, None, None]:
+
         for i, chunk in enumerate(text_chunks, 1):
             print(f"Synthesizing chunk {i}...")
 
-            if self._speaker_id:
-                wav = self._tts.tts(chunk, speaker=self._speaker_id)
-            else:
-                wav = self._tts.tts(chunk)
+            inference_kwargs = {}
+
+            if voice_profile:
+                if voice_profile.type == "speaker":
+                    inference_kwargs["speaker"] = voice_profile.speaker_id
+
+                elif voice_profile.type == "clone":
+                    inference_kwargs["speaker_wav"] = str(
+                        voice_profile.reference_audio_path
+                    )
+                    if voice_profile.language:
+                        inference_kwargs["language"] = voice_profile.language
+
+            wav = self._tts.tts(chunk, **inference_kwargs)
 
             yield np.asarray(wav, dtype=np.float32)

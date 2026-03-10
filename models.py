@@ -1,24 +1,55 @@
 """Domain models and validation schemas."""
 
 from pathlib import Path
+from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
+
+VoiceType = Literal["speaker", "clone"]
+
+
+class VoiceProfile(BaseModel):
+    """Represents a runtime voice configuration."""
+
+    type: VoiceType
+    speaker_id: Optional[str] = None
+    reference_audio_path: Optional[Path] = None
+    language: Optional[str] = "en"
+
+    @field_validator("reference_audio_path")
+    @classmethod
+    def validate_reference_path(cls, value: Optional[Path]) -> Optional[Path]:
+        if value and not value.exists():
+            raise FileNotFoundError(f"Reference audio not found: {value}")
+        return value
+
+    @field_validator("speaker_id")
+    @classmethod
+    def validate_speaker_id(cls, value: Optional[str], info):
+        voice_type = info.data.get("type")
+        if voice_type == "speaker" and not value:
+            raise ValueError("speaker_id must be provided for speaker type.")
+        return value
+
+
+class VoiceRegistry(BaseModel):
+    """Collection of reusable voice presets."""
+
+    presets: Dict[str, VoiceProfile]
+
+
+class DefaultVoiceConfig(BaseModel):
+    """Defines default voice preset."""
+
+    preset: Optional[str] = None
 
 
 class TTSConfig(BaseModel):
     """Configuration for TTS model."""
 
-    model_name: str = Field(..., description="Coqui TTS model name")
-    use_gpu: bool = Field(default=True)
-    speaker_id: str = Field(..., description="Speaker ID (e.g. p260)")
-
-    @field_validator("model_name")
-    @classmethod
-    def validate_model_name(cls, value: str) -> str:
-        """Validate model name is not empty."""
-        if not value.strip():
-            raise ValueError("Model name cannot be empty.")
-        return value
+    model_name: str
+    use_gpu: bool = True
+    default_voice: Optional[DefaultVoiceConfig] = None
 
 
 class AudioConfig(BaseModel):
@@ -32,6 +63,7 @@ class AppConfig(BaseModel):
 
     tts: TTSConfig
     audio: AudioConfig
+    voices: Optional[VoiceRegistry] = None
 
 
 class SynthesisRequest(BaseModel):
@@ -39,21 +71,4 @@ class SynthesisRequest(BaseModel):
 
     input_path: Path
     output_path: Path
-
-    @field_validator("input_path")
-    @classmethod
-    def validate_input_exists(cls, value: Path) -> Path:
-        """Ensure input file exists."""
-        if not value.exists():
-            raise FileNotFoundError(f"Input file not found: {value}")
-        if value.suffix.lower() != ".txt":
-            raise ValueError("Input file must be a .txt file.")
-        return value
-
-    @field_validator("output_path")
-    @classmethod
-    def validate_output_extension(cls, value: Path) -> Path:
-        """Ensure output file is .wav."""
-        if value.suffix.lower() != ".wav":
-            raise ValueError("Output file must be a .wav file.")
-        return value
+    voice_profile: Optional[VoiceProfile] = None
